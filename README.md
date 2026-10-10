@@ -94,7 +94,33 @@ I built a FastAPI-based regulatory document intelligence backend that ingests te
 
 The main PDF-to-RAG pipeline is:
 
-PDF ↓ FastAPI upload endpoint ↓ pypdf text extraction ↓ PostgreSQL document ↓ Character-based chunking ↓ PostgreSQL document_chunks ↓ SentenceTransformer embeddings ↓ ChromaDB ↓ Semantic similarity search ↓ Relevant chunks ↓ RAG context ↓ Gemini ↓ Grounded answer + source metadata
+```text
+PDF
+ ↓
+FastAPI upload endpoint
+ ↓
+pypdf text extraction
+ ↓
+PostgreSQL document
+ ↓
+Character-based chunking
+ ↓
+PostgreSQL document_chunks
+ ↓
+SentenceTransformer embeddings
+ ↓
+ChromaDB
+ ↓
+Semantic similarity search
+ ↓
+Relevant chunks
+ ↓
+RAG context
+ ↓
+Gemini
+ ↓
+Grounded answer + source metadata
+```
 
 ## 4. Technology Stack
 
@@ -142,7 +168,11 @@ The `document_chunks` table stores:
 
 The relationship is:
 
-Document │ └── 1 ─────────── many ── DocumentChunk
+```text
+Document 
+│ 
+└── 1 ─────────── many ── DocumentChunk
+```
 
 A document therefore has multiple chunk records rather than storing all chunks inside a single database field.
 
@@ -209,7 +239,13 @@ The overlap helps preserve context across chunk boundaries.
 
 For example:
 
-Chunk 0: characters 0 - 999 ↓ Chunk 1: characters 800 - 1799 ↓ Chunk 2: characters 1600 - 2599
+```text
+Chunk 0: characters 0 - 999
+ ↓ 
+Chunk 1: characters 800 - 1799 
+ ↓ 
+Chunk 2: characters 1600 - 2599
+```
 
 The implementation is intentionally simple and suitable for the current project scope.
 
@@ -238,7 +274,11 @@ If chunk creation fails, the transaction can be rolled back.
 
 This provides a useful consistency guarantee:
 
-Document + Chunks │ └── one transaction
+```text
+Document + Chunks 
+        │ 
+        └── one transaction
+```
 
 ## 9. Embeddings
 
@@ -253,8 +293,13 @@ The model generates 384-dimensional embeddings.
 
 Conceptually:
 
-Text chunk ↓ SentenceTransformer ↓ 384-dimensional vector
-
+```text
+Text chunk
+ ↓ 
+SentenceTransformer
+ ↓ 
+384-dimensional vector
+```
 
 These vectors are stored in ChromaDB and used for semantic similarity search.
 
@@ -292,7 +337,23 @@ The RAG pipeline combines semantic retrieval with Gemini.
 
 The process is:
 
-User question ↓ Question embedding ↓ ChromaDB semantic search ↓ Top-k relevant chunks ↓ Context construction ↓ Gemini ↓ Grounded answer ↓ Source references
+```text
+User question
+ ↓
+Question embedding
+ ↓
+ChromaDB semantic search
+ ↓ 
+Top-k relevant chunks
+ ↓ 
+Context construction
+ ↓ 
+Gemini
+ ↓ 
+Grounded answer
+ ↓ 
+Source references
+```
 
 
 Gemini is instructed to use the supplied document context rather than inventing facts or relying on unrelated external information.
@@ -490,8 +551,24 @@ The response contains:
 
 A successful response has the following structure:
 
-{ "question": "What are the health benefits of physical activity?", "answer": "Based on the provided documents, the health benefits of physical activity include ...", "sources": [ { "documentid": 10, "chunkindex": 1, "distance": 0.5528 }, { "documentid": 10, "chunkindex": 0, "distance": 0.5725 } ] }
-
+```json
+{
+  "question": "What are the health benefits of physical activity?",
+  "answer": "Based on the provided documents, the health benefits of physical activity include ...",
+  "sources": [
+    {
+      "documentid": 10,
+      "chunkindex": 1,
+      "distance": 0.5528
+    },
+    {
+      "documentid": 10,
+      "chunkindex": 0,
+      "distance": 0.5725
+    }
+  ]
+}
+```
 
 The exact answer and distances vary depending on the query and retrieved chunks.
 
@@ -499,7 +576,33 @@ The exact answer and distances vary depending on the query and retrieved chunks.
 
 ## 17. Project Structure
 
-regulatory-intelligence/ │ ├── app/ │ ├── main.py │ ├── database.py │ ├── models.py │ ├── schemas.py │ ├── chunking.py │ ├── embeddings.py │ ├── vectorstore.py │ ├── indexembeddings.py │ ├── semanticsearch.py │ ├── llm.py │ ├── rag.py │ └── backfillchunks.py │ ├── chroma_db/ │ └── Local persistent ChromaDB data │ ├── .env ├── .venv/ └── README.md
+```text
+regulatory-intelligence/
+│
+├── app/
+│   ├── main.py
+│   ├── database.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── chunking.py
+│   ├── embeddings.py
+│   ├── vector_store.py
+│   ├── index_embeddings.py
+│   ├── semantic_search.py
+│   ├── llm.py
+│   ├── rag.py
+│   └── backfill_chunks.py
+│
+├── chroma_db/
+│   └── Local persistent ChromaDB data
+│
+├── .env
+├── .venv/
+├── .gitignore
+├── .env.example
+├── requirements.txt
+└── README.md
+```
 
 ## 18. Local Setup
 
@@ -537,7 +640,7 @@ The existing environment should be preserved rather than recreated unnecessarily
 
 Windows PowerShell:
 
-..venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 
 
 ---
@@ -547,9 +650,10 @@ Windows PowerShell:
 Create a `.env` file in the project root.
 
 Example structure:
-
-DATABASEURL=postgresql+psycopg://postgres:YOURENCODEDPASSWORD@localhost:5432/regulatoryintelligence GEMINIAPIKEY=YOURGEMINIAPI_KEY
-
+```text
+DATABASE_URL=postgresql+psycopg://postgres:YOUR_ENCODED_PASSWORD@localhost:5432/regulatoryintelligence
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+```
 
 Do not commit the real `.env` file to GitHub.
 
@@ -743,8 +847,19 @@ A RAG query about the health benefits of physical activity successfully returned
 
 This verified the complete:
 
-Document ↓ Chunk ↓ Embedding ↓ Retrieval ↓ RAG ↓ Sources
-
+```text
+Document
+ ↓ 
+Chunk
+ ↓ 
+Embedding
+ ↓
+Retrieval
+ ↓ 
+RAG
+ ↓ 
+Sources
+```
 
 pipeline.
 
@@ -829,5 +944,5 @@ The core backend is feature-complete and has been verified end-to-end.
 | Source metadata | ✓ |
 | End-to-end verification | ✓ |
 
-The remaining project work is focused on documentation, repository cleanup, .gitignore, and publication to GitHub.
+
 
